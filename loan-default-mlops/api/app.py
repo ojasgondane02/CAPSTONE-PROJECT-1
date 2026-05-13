@@ -1,15 +1,14 @@
 import os
+import sys
+
+# Add the parent directory (loan-default-mlops) to sys.path so 'api.schema' can be imported when running directly
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import joblib
 import pandas as pd
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from api.schema import LoanApplication
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="Loan Default Prediction API",
-    description="A simple API to predict loan defaults using a trained machine learning model.",
-    version="1.0"
-)
 
 # Load the best model
 # Define the path to the model relative to the execution directory
@@ -18,8 +17,8 @@ MODEL_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "models", 
 # We will load the model when the app starts
 model = None
 
-@app.on_event("startup")
-def load_model():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global model
     try:
         model = joblib.load(MODEL_PATH)
@@ -29,6 +28,15 @@ def load_model():
         # Note: We don't raise an exception here so the app can still start 
         # and show an error when the prediction endpoint is called, 
         # if the user hasn't trained the model yet.
+    yield
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="Loan Default Prediction API",
+    description="A simple API to predict loan defaults using a trained machine learning model.",
+    version="1.0",
+    lifespan=lifespan
+)
 
 @app.get("/")
 def home():
@@ -47,7 +55,7 @@ def predict_default(application: LoanApplication):
     
     try:
         # Convert input data to a dictionary and then to a DataFrame
-        input_data = application.dict()
+        input_data = application.model_dump()
         input_df = pd.DataFrame([input_data])
         
         # Make prediction

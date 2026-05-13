@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class LoanApplication(BaseModel):
     # Defining input features expected by the model
@@ -36,7 +36,7 @@ class LoanApplication(BaseModel):
     Security_Type: str
     dtir1: float
     
-    class Config:
+    model_config = ConfigDict(
         json_schema_extra = {
             "example": {
                 "ID": 24890,
@@ -74,3 +74,4 @@ class LoanApplication(BaseModel):
                 "dtir1": 45.0
             }
         }
+    )
